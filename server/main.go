@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,12 +12,12 @@ func main() {
 	flag.Parse()
 	r := gin.Default()
 	r.SetTrustedProxies([]string{"192.168.0.0"})
-	r.LoadHTMLFiles("C:\\Users\\ao-du\\Documents\\Code\\pokerchips\\client\\index.html")
+	r.LoadHTMLFiles("C:\\Users\\sredn\\Documents\\Code\\websites\\pokerchips\\client\\index.html")
 
 	game := newGame()
 	go game.run()
 
-	r.GET("/", func (c *gin.Context) {
+	r.GET("/", func(c *gin.Context) {
 		c.HTML(200, "index.html", nil)
 	})
 
