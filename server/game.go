@@ -22,64 +22,78 @@ var lobby models.Lobby = models.Lobby{
 	},
 }
 
+func handleError(err *models.Error, res *models.Response) []byte {
+	log.Println("handling error " + err.Cause)
+	res.Error = err
+	b, jsonError := json.Marshal(*res)
+	if jsonError != nil {
+		log.Println("error: ", err)
+		return []byte("Unknown error occured... " + jsonError.Error())
+	}
+	return b
+}
+
 func updateGameState(e []byte) []byte {
-	var req models.Request
-	var errObject *models.Error
-	var message string
+	var req *models.Request
+	var player *models.Player
+	res := &models.Response{}
 	err := json.Unmarshal(e, &req)
 	if err != nil {
-		log.Println("error: ", err)
-		errObject = &models.Error{"json decoding error", err.Error()}
+		return handleError(&models.Error{"json decoding error", err.Error()}, res)
 	}
 	if _, ok := gameState.Players[req.Player.Name]; !ok && req.Action != "new_player" {
-		errObject = &models.Error{"player not found", "Could not find player with name " + req.Player.Name + " in players list."}
-		req.Action = "error"
+		return handleError(&models.Error{"player not found", "Could not find player with name " + req.Player.Name + " in players list."}, res)
+	} else if req.Action != "new_player" {
+		player = gameState.Players[req.Player.Name]
 	}
 	switch req.Action {
-	case "check":
-		message = req.Player.Name + " checks"
-	case "bet":
-		req.Player.Chips -= req.Amount
-		gameState.Pot += req.Amount
-		message = req.Player.Name + " bets " + string(req.Amount)
-	case "fold":
-		gameState.Players[req.Player.Name].Folded = true
-		message = req.Player.Name + " folds"
 	case "new_player":
 		ok := true
 		for _, val := range gameState.Players {
 			if req.Player.Name == val.Name {
 				ok = false
-				errObject = &models.Error{"duplicate player", "Player name already exists, please pick a new one"}
+				return handleError(&models.Error{"duplicate player", "Player name already exists, please pick a new one"}, res)
 			}
 		}
 		if ok {
-			gameState.Players[req.Player.Name] = &models.Player{
+			player = &models.Player{
 				Spot:   len(gameState.Players),
 				Name:   req.Player.Name,
 				Chips:  lobby.Settings.InitialChips,
 				Folded: false,
 			}
-			message = "added player " + req.Player.Name
+			res.Message = "added player " + player.Name
 		}
 	case "remove_player":
-		delete(gameState.Players, req.Player.Name)
+		delete(gameState.Players, player.Name)
 		for _, val := range gameState.Players {
 			if val.Spot > req.Player.Spot {
 				val.Spot -= 1
 			}
 		}
-		message = "removed player " + req.Player.Name
-	}
-	if gameState.Playing && gameState.Turn < len(gameState.Players) {
+		res.Message = "removed player " + player.Name
+		player = req.Player
+	case "check":
+		log.Println("check")
+		res.Message = player.Name + " checks"
+		gameState.Turn += 1
+	case "bet":
+		log.Println("bet")
+		player.Chips -= req.Amount
+		gameState.Pot += req.Amount
+		res.Message = player.Name + " bets " + string(req.Amount)
+		gameState.Turn += 1
+	case "fold":
+		log.Println("fold")
+		player.Folded = true
+		res.Message = player.Name + " folds"
 		gameState.Turn += 1
 	}
-	res := models.Response{
-		Message:   message,
-		Player:    gameState.Players[req.Player.Name],
-		GameState: &gameState,
-		Error:     errObject,
+	if req.Action != "remove_player" {
+		gameState.Players[player.Name] = player
+		res.GameState = &gameState
 	}
+	res.Player = player
 	b, err := json.Marshal(res)
 	if err != nil {
 		log.Println("error: ", err)
