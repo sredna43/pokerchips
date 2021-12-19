@@ -1,7 +1,7 @@
 package models
 
 type Lobby struct {
-	Id        string     `json:"id"`
+	Host      bool       `json:"has_host"`
 	GameState *GameState `json:"game_state"`
 	Settings  *Settings  `json:"settings"`
 }
