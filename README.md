@@ -4,7 +4,7 @@ A client/server app that simulates poker chips so you and your friends can play 
 
 # Client
 
-The client is written in [Svelte](https://svelte.dev/)
+The client is written in [Svelte](https://svelte.dev/) using SvelteKit (see client's readme for more info)
 
 # Server
 

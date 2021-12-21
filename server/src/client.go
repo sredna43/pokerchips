@@ -14,11 +14,17 @@ const (
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 512
+	allowedOrigin  = "http://localhost:5000"
 )
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		log.Println(origin)
+		return origin == allowedOrigin || origin == "http://127.0.0.1:5000"
+	},
 }
 
 type Client struct {
