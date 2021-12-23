@@ -4,23 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
-	"time"
 
 	"github.com/sredna43/pokerchips/models"
 )
 
 const letterBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func generateLobby(n int) string {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[r1.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
 
 func handleError(cause, message string, res *models.Response) []byte {
 	log.Println("handling error " + cause)
@@ -151,7 +139,7 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 	return b
 }
 
-var lobbies = make(map[string]*models.Lobby)
+var Lobbies = make(map[string]*models.Lobby)
 
 func handleRequest(m []byte) []byte {
 	var req *models.Request
@@ -161,39 +149,29 @@ func handleRequest(m []byte) []byte {
 	if err != nil {
 		return handleError("json deconding error", err.Error(), res)
 	}
-	if _, ok := lobbies[req.Lobby]; !ok && req.Action != "new_game" {
+	if _, ok := Lobbies[req.Lobby]; !ok && req.Action != "new_game" {
 		return handleError("invalid lobby id", "lobby id "+req.Lobby+" not found", res)
 	}
 	switch req.Action {
-	case "new_game":
-		lobbyId := generateLobby(3)
-		lobbies[lobbyId] = &models.Lobby{
-			GameState: &models.GameState{
-				Players: make(map[string]*models.Player),
-			},
-			Settings: &models.Settings{},
-		}
-		res.Message = lobbyId
-		updateEligible = false
 	case "remove_game":
-		delete(lobbies, req.Lobby)
+		delete(Lobbies, req.Lobby)
 		res.Message = "removed game " + req.Lobby
 		updateEligible = false
 	case "set_initial_chips":
-		lobbies[req.Lobby].Settings.InitialChips = req.Amount
+		Lobbies[req.Lobby].Settings.InitialChips = req.Amount
 		res.Message = "set initial chips to " + fmt.Sprint(req.Amount)
 		updateEligible = false
 	case "set_max_players":
-		lobbies[req.Lobby].Settings.MaxPlayers = req.Amount
+		Lobbies[req.Lobby].Settings.MaxPlayers = req.Amount
 		res.Message = "set max players to " + fmt.Sprint(req.Amount)
 		updateEligible = false
 	case "get_state":
 		res.Message = "current state"
-		res.GameState = lobbies[req.Lobby].GameState
+		res.GameState = Lobbies[req.Lobby].GameState
 		updateEligible = false
 	}
 	if updateEligible {
-		return updateGameState(req, lobbies[req.Lobby])
+		return updateGameState(req, Lobbies[req.Lobby])
 	} else {
 		b, err := json.Marshal(res)
 		if err != nil {

@@ -14,7 +14,7 @@ const (
 	pongWait       = 60 * time.Second
 	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 512
-	allowedOrigin  = "http://localhost:5000"
+	allowedOrigin  = "http://192.168.0.12:3000"
 )
 
 var upgrader = websocket.Upgrader{
@@ -23,7 +23,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
 		log.Println(origin)
-		return origin == allowedOrigin || origin == "http://127.0.0.1:5000"
+		return origin == allowedOrigin || origin == "http://localhost:3000"
 	},
 }
 
