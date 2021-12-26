@@ -164,6 +164,7 @@ func handleRequest(m []byte) []byte {
 	if _, ok := Lobbies[req.Lobby]; !ok && req.Action != "new_game" {
 		return handleError(req.Player, "invalid lobby id", "lobby id "+req.Lobby+" not found", res)
 	}
+	res.Lobby = req.Lobby
 	switch req.Action {
 	case "remove_game":
 		delete(Lobbies, req.Lobby)

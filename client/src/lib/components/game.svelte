@@ -11,8 +11,7 @@
     var lobbyId;
     var myName;
     var state;
-    var errorMessage;
-    var allPlayers;
+    var errorMessage = '';
     var gameState;
     var maxPlayers;
     var initialChips;
@@ -21,7 +20,6 @@
         localStorage.setItem('lobbyId', lobbyId);
         localStorage.setItem('myName', myName);
         localStorage.setItem('state', state);
-        localStorage.setItem('errorMessage', errorMessage);
         localStorage.setItem('gameState', JSON.stringify(gameState));
         localStorage.setItem('saveState', save);
     }
@@ -31,13 +29,11 @@
             lobbyId = localStorage.getItem('lobbyId');
             myName = localStorage.getItem('myName');
             state = localStorage.getItem('state');
-            errorMessage = localStorage.getItem('errorMessage');
             gameState = localStorage.getItem('gameState') !== 'undefined' ? JSON.parse(localStorage.getItem('gameState')) : {};
         } else {
             lobbyId = '';
             myName = '';
             state = 'hostjoin';
-            errorMessage = '';
             gameState = {};
         }
     }
@@ -64,9 +60,11 @@
                 return;
             }
             gameState = game_state;
-            allPlayers = gameState && gameState.players && Object.keys(gameState.players) || allPlayers;
             if (message === 'added player ' + myName) {
                 state = 'lobby';
+            }
+            if (message.includes('removed') && state !== 'hostjoin') {
+                sendAction('get_state');
             }
             if (gameState && gameState.playing) {
                 state = 'playing';
@@ -139,7 +137,6 @@
         errorMessage = '';
         myName = '';
         lobbyId = '';
-        allPlayers = [];
         gameState = {};
         setLocalStorage('no');
     }
@@ -175,14 +172,14 @@
 
     <Button text="Start Game" onClick={startGame} disabled={gameState && !gameState.players[myName].is_host}/>
     <h3>{lobbyId && `Table Code: ${lobbyId.toUpperCase()}`}</h3>
-    <Players playerNames={allPlayers} />
+    <Players {gameState} />
     {#if gameState && gameState.players && gameState.players[myName].is_host}
         <Settings {setMaxPlayers} {setInitialChips} bind:maxPlayers bind:initialChips/>
     {/if}
 
 {:else if state === 'playing'}
 
-    <Players playerNames={allPlayers} />
+    <Players {gameState}/>
     <Actions />
 
 {/if}
