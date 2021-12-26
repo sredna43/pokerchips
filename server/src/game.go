@@ -50,7 +50,7 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 				return handleError(req.Player, "duplicate player", "player name already exists", res)
 			}
 		}
-		if gameState.Playing {
+		if gameState.Playing || len(gameState.Players) == lobby.Settings.MaxPlayers {
 			ok = false
 		}
 		if ok {

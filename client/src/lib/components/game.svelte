@@ -4,6 +4,7 @@
     import Error from './error.svelte';
     import Players from './players.svelte';
     import Settings from './settings.svelte';
+    import Actions from './actions.svelte';
     import { onMount } from 'svelte';
     import { serverHost, sendMessage, messageStore, socketState } from '../store.js';
 
@@ -142,6 +143,14 @@
         gameState = {};
         setLocalStorage('no');
     }
+
+    const isMyTurn = () => {
+        return gameState && gameState.players && gameState.players[myName].spot === gameState.whose_turn;
+    }
+
+    const amDealer = () => {
+        return gameState && gameState.players && gameState.players[myName].spot === gameState.dealer;
+    }
 </script>
 
 <div class="game">
@@ -173,7 +182,8 @@
 
 {:else if state === 'playing'}
 
-    <h3>Game</h3>
+    <Players playerNames={allPlayers} />
+    <Actions />
 
 {/if}
 </div>

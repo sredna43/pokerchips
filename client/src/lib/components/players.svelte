@@ -1,10 +1,11 @@
 <script>
     export let playerNames = [];
+    export let gameState = {};
 </script>
 
 <h4>Players:</h4>
 <ol>
     {#each playerNames as player }
-        <li>{player}</li>
+        <li>{player} - Chips: {gameState && gameState.Players && gameState.players[player].chips || 0} {gameState && gameState.players && gameState.players[player].folded ? 'Folded' : ''}</li>
     {/each}
 </ol>
