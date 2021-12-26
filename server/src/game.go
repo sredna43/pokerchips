@@ -10,9 +10,13 @@ import (
 
 const letterBytes = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func handleError(cause, message string, res *models.Response) []byte {
+func handleError(player *models.Player, cause, message string, res *models.Response) []byte {
 	log.Println("handling error " + cause)
+	if player == nil {
+		player = &models.Player{Name: ""}
+	}
 	res.Error = &models.Error{
+		Player: player,
 		Cause:   cause,
 		Message: message,
 	}
@@ -30,11 +34,11 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 	var player *models.Player
 	res := &models.Response{}
 	if _, ok := gameState.Players[req.Player.Name]; !ok && req.Action != "new_player" {
-		return handleError("player not found", "Could not find player with name "+req.Player.Name+" in players list.", res)
+		return handleError(req.Player, "player not found", "Could not find player with name "+req.Player.Name+" in players list.", res)
 	} else if req.Action != "new_player" {
 		player = gameState.Players[req.Player.Name]
 	} else if req.Player.Folded {
-		return handleError("invalid action", "player has folded", res)
+		return handleError(req.Player, "invalid action", "player has folded", res)
 	}
 	switch req.Action {
 	case "new_player":
@@ -43,8 +47,11 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 		for _, val := range gameState.Players {
 			if req.Player.Name == val.Name {
 				ok = false
-				return handleError("duplicate player", "player name already exists", res)
+				return handleError(req.Player, "duplicate player", "player name already exists", res)
 			}
+		}
+		if gameState.Playing {
+			ok = false
 		}
 		if ok {
 			player = &models.Player{
@@ -55,6 +62,7 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 			}
 			if !lobby.Host {
 				player.Host = true
+				lobby.Host = true
 			} else {
 				player.Host = false
 			}
@@ -77,10 +85,10 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 	case "bet":
 		log.Println("bet")
 		if req.Amount <= 0 {
-			return handleError("invalid bet", "amount must be positive and non-zero", res)
+			return handleError(req.Player, "invalid bet", "amount must be positive and non-zero", res)
 		}
 		if req.Amount > player.Chips {
-			return handleError("invalid bet", "player does not have enough chips", res)
+			return handleError(req.Player, "invalid bet", "player does not have enough chips", res)
 		}
 		player.Chips -= req.Amount
 		gameState.Pot += req.Amount
@@ -93,7 +101,7 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 		gameState.Turn += 1
 	case "new_hand":
 		if !req.Player.Host {
-			return handleError("action not allowed", "only the host can start a new hand", res)
+			return handleError(req.Player, "action not allowed", "only the host can start a new hand", res)
 		}
 		log.Println("new_hand")
 		for _, val := range gameState.Players {
@@ -106,13 +114,14 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 		}
 		gameState.Turn = gameState.Dealer + 1
 	case "start_game":
-		if !req.Player.Host {
-			return handleError("action not allowed", "only the host can start a new game", res)
+		if !player.Host {
+			return handleError(req.Player, "action not allowed", "only the host can start a new game", res)
 		}
+		res.Message = "started game"
 		gameState.Playing = true
 	case "restart_game":
-		if !req.Player.Host {
-			return handleError("action not allowed", "only the host can start a new game", res)
+		if !player.Host {
+			return handleError(req.Player, "action not allowed", "only the host can start a new game", res)
 		}
 		gameState.Turn = 0
 		gameState.Playing = true
@@ -122,7 +131,7 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 			val.Chips = lobby.Settings.InitialChips
 		}
 	default:
-		return handleError("invalid action", "unknown request action", res)
+		return handleError(req.Player, "invalid action", "unknown request action", res)
 	}
 	if gameState.Turn >= len(gameState.Players) {
 		gameState.Turn = 0
@@ -146,11 +155,14 @@ func handleRequest(m []byte) []byte {
 	updateEligible := true
 	err := json.Unmarshal(m, &req)
 	res := &models.Response{}
+	if req == nil {
+		req = &models.Request{}
+	}
 	if err != nil {
-		return handleError("json deconding error", err.Error(), res)
+		return handleError(req.Player, "json deconding error", err.Error(), res)
 	}
 	if _, ok := Lobbies[req.Lobby]; !ok && req.Action != "new_game" {
-		return handleError("invalid lobby id", "lobby id "+req.Lobby+" not found", res)
+		return handleError(req.Player, "invalid lobby id", "lobby id "+req.Lobby+" not found", res)
 	}
 	switch req.Action {
 	case "remove_game":
@@ -160,10 +172,12 @@ func handleRequest(m []byte) []byte {
 	case "set_initial_chips":
 		Lobbies[req.Lobby].Settings.InitialChips = req.Amount
 		res.Message = "set initial chips to " + fmt.Sprint(req.Amount)
+		res.GameState = Lobbies[req.Lobby].GameState
 		updateEligible = false
 	case "set_max_players":
 		Lobbies[req.Lobby].Settings.MaxPlayers = req.Amount
 		res.Message = "set max players to " + fmt.Sprint(req.Amount)
+		res.GameState = Lobbies[req.Lobby].GameState
 		updateEligible = false
 	case "get_state":
 		res.Message = "current state"

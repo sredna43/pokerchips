@@ -2,7 +2,8 @@ import { writable } from 'svelte/store'
 import { browser } from '$app/env'
 
 export const messageStore = writable('');
-export const serverHost = '192.168.0.12:8081'
+export const socketState = writable('');
+export const serverHost = 'localhost:8081'
 
 let socket;
 
@@ -11,6 +12,7 @@ if (browser) {
 
     socket.addEventListener('open', (event) => {
         console.log('opened websocket');
+        socketState.set('connected');
     });
 
     socket.addEventListener('message', (event) => {
@@ -19,8 +21,7 @@ if (browser) {
 }
 
 export const sendMessage = (message) => {
-    if (socket.readyState <= 1 && browser) {
-        console.log('sending message');
+    if (socket.readyState === WebSocket.OPEN && browser) {
         socket.send(message);
     }
 }

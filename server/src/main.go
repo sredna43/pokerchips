@@ -4,6 +4,8 @@ import (
 	"flag"
 	"math/rand"
 	"time"
+	"strings"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sredna43/pokerchips/models"
@@ -37,18 +39,28 @@ func main() {
 			GameState: &models.GameState{
 				Players: make(map[string]*models.Player),
 			},
-			Settings: &models.Settings{},
+			Settings: &models.Settings{
+				MaxPlayers: 4,
+				InitialChips: 100,
+			},
+			CreatedOn: time.Now().Unix(),
+		}
+		for lobby := range Lobbies {
+			if time.Now().Unix() - Lobbies[lobby].CreatedOn > 86400 {
+				delete(Lobbies, lobby)
+			}
 		}
 		c.JSON(200, lobbyId)
 	})
 
 	r.GET("/:lobbyId", func(c *gin.Context) {
+		log.Printf("%#v", Lobbies)
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		lobbyId := c.Param("lobbyId")
+		lobbyId := strings.ToUpper(c.Param("lobbyId"))
 		if _, ok := Lobbies[lobbyId]; ok {
 			c.JSON(200, "OK")
 		} else {
-			c.JSON(404, "NOT FOUND")
+			c.JSON(404, "Table " + strings.ToUpper(lobbyId) + " not found.")
 		}
 	})
 

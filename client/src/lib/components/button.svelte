@@ -1,4 +1,5 @@
 <script>
+    export let disabled = false;
     export let text = "";
     export let onClick = () => {
         console.log("default on click");
@@ -6,7 +7,7 @@
     export let variant = 'primary-filled';
 </script>
 
-<button class={variant} on:click={onClick}>{text}</button>
+<button class={variant} on:click={onClick} disabled={disabled} title={disabled ? 'Only host can start a game' : 'Start game'}>{text}</button>
 
 <style>
     button {
@@ -25,7 +26,7 @@
         border: 2px solid var(--primary)
     }
 
-    .primary-filled:hover {
+    .primary-filled:hover:not([disabled]) {
         color: black;
         background-color: white;
     }
@@ -36,13 +37,17 @@
         border: 2px solid var(--primary);
     }
 
-    .primary-outlined:hover {
+    .primary-outlined:hover:not([disabled]) {
         color: white;
         background-color: var(--primary);
     }
 
     .full-width {
-        width: 90%;
+        width: 100%;
+    }
+
+    button:disabled {
+        opacity: 30%;
     }
 
 </style>
