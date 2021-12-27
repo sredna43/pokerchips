@@ -1,11 +1,7 @@
 <script>
     import Input from "./input.svelte";
-    export let setMaxPlayers = () => {
-        console.log("default set max players");
-    }
-    export let setInitialChips = () => {
-        console.log("default set initial chips");
-    }
+    export let setMaxPlayers = () => {}
+    export let setInitialChips = () => {}
     export let maxPlayers = '4';
     export let initialChips = '100';
 </script>

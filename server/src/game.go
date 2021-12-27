@@ -40,6 +40,7 @@ func updateGameState(req *models.Request, lobby *models.Lobby) []byte {
 	} else if req.Player.Folded {
 		return handleError(req.Player, "invalid action", "player has folded", res)
 	}
+	res.Lobby = req.Lobby
 	switch req.Action {
 	case "new_player":
 		log.Println("new_player")

@@ -8,35 +8,15 @@
     import { onMount } from 'svelte';
     import { serverHost, sendMessage, messageStore, socketState } from '../store.js';
 
-    var lobbyId;
-    var myName;
-    var state;
+    var lobbyId = '';
+    var myName = '';
+    var state = 'hostjoin';
     var errorMessage = '';
-    var gameState;
-    var maxPlayers;
-    var initialChips;
-
-    const setLocalStorage = (save = 'no') => {
-        localStorage.setItem('lobbyId', lobbyId);
-        localStorage.setItem('myName', myName);
-        localStorage.setItem('state', state);
-        localStorage.setItem('gameState', JSON.stringify(gameState));
-        localStorage.setItem('saveState', save);
-    }
-
-    const getLocalStorage = () => {
-        if (localStorage.getItem('saveState') === 'yes') {
-            lobbyId = localStorage.getItem('lobbyId');
-            myName = localStorage.getItem('myName');
-            state = localStorage.getItem('state');
-            gameState = localStorage.getItem('gameState') !== 'undefined' ? JSON.parse(localStorage.getItem('gameState')) : {};
-        } else {
-            lobbyId = '';
-            myName = '';
-            state = 'hostjoin';
-            gameState = {};
-        }
-    }
+    var gameState = {};
+    var maxPlayers = '4';
+    var initialChips = '100';
+    var betText = 'Bet';
+    var canCheck = true;
 
     const sendAction = (action, amount = 0) => {
         sendMessage(JSON.stringify({
@@ -52,36 +32,45 @@
     const handleMessage = (m) => {
         if (m.length > 1) {
             let res = JSON.parse(m);
-            let {message, game_state, player, error} = res;
-            console.log(res);
-            if (error && error.player.name == myName || error && error.player.name == "") {
+            let {lobby, message, game_state, player, error} = res;
+            if (lobby.toLowerCase() !== lobbyId) {
+                return;
+            }
+            if (error && (error.player.name === myName && !error.message.includes('exists') || (error.message.includes('exists') && state == 'entername'))) {
                 console.error('Error from server: ' + error.cause + ' --- ' + error.message);
                 errorMessage = error.message;
                 return;
             }
-            gameState = game_state;
+            if (game_state !== null) {
+                gameState = game_state;
+            }
+            if (gameState && gameState.playing && state !== 'playing') {
+                state = 'playing';
+            }
             if (message === 'added player ' + myName) {
                 state = 'lobby';
             }
             if (message.includes('removed') && state !== 'hostjoin') {
                 sendAction('get_state');
             }
-            if (gameState && gameState.playing) {
-                state = 'playing';
+            if (message.includes('removed') && player.name == myName) {
+                resetState();
             }
-            setLocalStorage('yes');
+            if (message.includes('bet')) {
+                canCheck = false;
+                betText = 'Raise';
+            }
+            if (message.includes('check')) {
+                betText = 'Bet';
+            }
         }
         messageStore.set('');
     }
 
     onMount(() => {
         messageStore.subscribe(currentMessage => {
-            handleMessage(currentMessage);
-        })
-        getLocalStorage();
-        socketState.subscribe(state => {
-            state === 'connected' && lobbyId !== '' && sendAction('get_state');
-        })
+            handleMessage(currentMessage)
+        });
     })
 
     const onJoinPressed = async () => {
@@ -138,7 +127,6 @@
         myName = '';
         lobbyId = '';
         gameState = {};
-        setLocalStorage('no');
     }
 
     const isMyTurn = () => {
@@ -172,15 +160,16 @@
 
     <Button text="Start Game" onClick={startGame} disabled={gameState && !gameState.players[myName].is_host}/>
     <h3>{lobbyId && `Table Code: ${lobbyId.toUpperCase()}`}</h3>
-    <Players {gameState} />
+    <Players bind:gameState={gameState} />
     {#if gameState && gameState.players && gameState.players[myName].is_host}
         <Settings {setMaxPlayers} {setInitialChips} bind:maxPlayers bind:initialChips/>
     {/if}
 
 {:else if state === 'playing'}
 
-    <Players {gameState}/>
-    <Actions />
+    <h2>Pot: {gameState.pot}</h2>
+    <Players bind:gameState={gameState}/>
+    <Actions bind:betText bind:canCheck/>
 
 {/if}
 </div>

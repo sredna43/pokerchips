@@ -4,13 +4,12 @@
     export let bet = () => {}
     export let fold = () => {}
     export let canCheck = true;
+    export let betText = 'Bet';
 </script>
 
 <div>
-    {#if canCheck}
-        <Button text="Check" onClick={check}/>
-    {/if}
-    <Button text="Bet" onClick={bet}/>
+    <Button text={canCheck ? "Check" : "Call"} onClick={canCheck ? check : bet}/>
+    <Button text={betText} onClick={bet}/>
     <Button text = "Fold" onClick={fold}/>
 </div>
 
